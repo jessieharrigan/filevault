@@ -35,9 +35,22 @@ pipeline {
             steps {
                 echo 'Building Docker image..'
                 dir ('src/azure-sa') {
-                    sh 'docker --version'
-                    sh 'docker-compose --version'
-                    sh 'docker-compose build'
+                    withCredentials([
+                        string(credentialsId: 'AZURE_STORAGE_ACCOUNT_NAME', variable: 'AZURE_STORAGE_ACCOUNT_NAME'),
+                        string(credentialsId: 'AZURE_STORAGE_ACCOUNT_KEY', variable: 'AZURE_STORAGE_ACCOUNT_KEY'),
+                        string(credentialsId: 'AZURE_CONTAINER_NAME', variable: 'AZURE_CONTAINER_NAME'),
+                        string(credentialsId: 'port', variable: 'PORT')
+                    ]) {
+                        sh '''
+                            cat > .env << EOF
+AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
+AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+AZURE_CONTAINER_NAME=${AZURE_CONTAINER_NAME}
+PORT=${PORT}
+EOF
+                        '''
+                        sh 'docker-compose build'
+                    }
                 }
             }
         }
@@ -45,8 +58,23 @@ pipeline {
             steps {
                 echo 'Deploying container..'
                 dir ('src/azure-sa') {
-                    sh 'docker-compose down || true'
-                    sh 'docker-compose up -d'
+                    withCredentials([
+                        string(credentialsId: 'AZURE_STORAGE_ACCOUNT_NAME', variable: 'AZURE_STORAGE_ACCOUNT_NAME'),
+                        string(credentialsId: 'AZURE_STORAGE_ACCOUNT_KEY', variable: 'AZURE_STORAGE_ACCOUNT_KEY'),
+                        string(credentialsId: 'AZURE_CONTAINER_NAME', variable: 'AZURE_CONTAINER_NAME'),
+                        string(credentialsId: 'port', variable: 'PORT')
+                    ]) {
+                        sh '''
+                            cat > .env << EOF
+AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
+AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+AZURE_CONTAINER_NAME=${AZURE_CONTAINER_NAME}
+PORT=${PORT}
+EOF
+                        '''
+                        sh 'docker-compose down || true'
+                        sh 'docker-compose up -d'
+                    }
                 }
             }
         }
@@ -56,6 +84,7 @@ pipeline {
         always {
             echo 'Cleaning up..'
             dir ('src/azure-sa') {
+                sh 'rm -f .env'
                 sh 'docker image prune -f || true'
             }
         }
