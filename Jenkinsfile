@@ -9,7 +9,7 @@ pipeline {
         }
         stage('Linting') {
             steps {
-                sh 'lint'
+                sh 'npm run lint'
                 echo 'Linting..'
             }
         }
