@@ -99,27 +99,6 @@ filevault/
 └── README.md
 ```
 
-## Setup for AWS S3
-
-### Configuration
-
-Navigate to the `src/aws-s3` directory and create a `.env` file based on the `.env.example`:
-
-```
-AWS_ACCESS_KEY_ID=your-access-key-id
-AWS_SECRET_ACCESS_KEY=your-secret-access-key
-AWS_REGION=your-region
-S3_BUCKET_NAME=your-s3-bucket-name
-PORT=3000
-```
-
-### Install Dependencies
-
-```
-cd src/aws-s3
-npm install express multer dotenv @aws-sdk/client-s3 @aws-sdk/lib-storage
-```
-
 ## Setup on Azure Storage Accounts
 
 ### Configuration
@@ -163,5 +142,3 @@ Open your browser and navigate to `http://localhost:3000`.
 - [ ] **File Search and Filtering**: Add functionality to search and filter files in the table.
 
 - [ ] **Drag and Drop Upload**: Enhance the upload feature with drag and drop functionality.
-
-:)
