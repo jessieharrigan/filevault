@@ -9,12 +9,14 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building..'
+                dir ('src/azure-sa') {
+                    sh 'npm install'
+                }
             }
         }
         stage('Linting') {
             steps {
                 dir ('src/azure-sa') {
-                    sh 'npm install'
                     sh 'npm run lint'
                     echo 'Linting..'
                 }
