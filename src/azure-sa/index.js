@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+global.crypto = crypto;
+
 const express = require('express');
 const multer = require('multer');
 const fs = require('fs');
