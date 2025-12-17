@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS'
+    }
+
     stages {
         stage('Build') {
             steps {
@@ -9,8 +13,11 @@ pipeline {
         }
         stage('Linting') {
             steps {
-                sh 'npm run lint'
-                echo 'Linting..'
+                dir ('src/azure-sa') {
+                    sh 'npm install'
+                    sh 'npm run lint'
+                    echo 'Linting..'
+                }
             }
         }
         stage('Test') {
