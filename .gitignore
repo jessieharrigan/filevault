@@ -29,3 +29,10 @@ Thumbs.db
 
 # Uploads
 **/uploads/
+
+# Terraform
+terraform/.terraform/providers/registry.terraform.io/hashicorp/azurerm/3.0.2/darwin_arm64/terraform-provider-azurerm_v3.0.2_x5
+terraform/terraform.tfstate.backup
+.gitignore
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
