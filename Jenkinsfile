@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'NodeJS'
-    }
-
     environment {
         AZURE_SUBSCRIPTION_ID = credentials('azure-subscription-id')
         AZURE_TENANT_ID = credentials('azure-tenant-id')
