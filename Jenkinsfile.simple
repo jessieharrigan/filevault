@@ -1,0 +1,48 @@
+pipeline {
+    agent any
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📦 Code checked out automatically by Jenkins'
+                sh 'ls -la'
+            }
+        }
+        
+        stage('Check Files') {
+            steps {
+                echo '📁 Checking project structure...'
+                sh '''
+                    echo "=== Root Directory ==="
+                    ls -la
+                    
+                    echo "\n=== Terraform Directory ==="
+                    ls -la terraform/ || echo "No terraform directory"
+                    
+                    echo "\n=== Source Directory ==="
+                    ls -la src/azure-sa/ || echo "No src/azure-sa directory"
+                '''
+            }
+        }
+        
+        stage('Check Node') {
+            steps {
+                echo '📦 Checking if we have Node.js...'
+                sh '''
+                    docker run --rm node:18-alpine node --version
+                    docker run --rm node:18-alpine npm --version
+                '''
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Simple pipeline works!'
+            echo 'Next steps: Add Docker build and Terraform'
+        }
+        failure {
+            echo '❌ Pipeline failed - check the logs above'
+        }
+    }
+}
