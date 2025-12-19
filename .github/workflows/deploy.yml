@@ -30,9 +30,8 @@ jobs:
         working-directory: ./terraform
         run: |
           terraform init
-          terraform apply -auto-approve -out=tfplan
+          terraform apply -auto-approve tfplan
           
-          # Capture outputs into GHA environment variables
           echo "STORAGE_ACCOUNT_NAME=$(terraform output -raw storage_account_name)" >> $GITHUB_ENV
           echo "STORAGE_ACCOUNT_KEY=$(terraform output -raw storage_account_key)" >> $GITHUB_ENV
           echo "CONTAINER_NAME=$(terraform output -raw container_name)" >> $GITHUB_ENV
@@ -45,7 +44,6 @@ jobs:
 
       - name: ▶️ Run Application
         run: |
-          # Stop old if exists (ignore error if not found)
           docker stop filevault || true
           docker rm filevault || true
           
