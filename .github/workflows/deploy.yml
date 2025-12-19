@@ -30,6 +30,8 @@ jobs:
         working-directory: ./terraform
         run: |
           terraform init
+          terraform plan -out=tfplan
+          ls -lh tfplan
           terraform apply -auto-approve tfplan
           
           echo "STORAGE_ACCOUNT_NAME=$(terraform output -raw storage_account_name)" >> $GITHUB_ENV
