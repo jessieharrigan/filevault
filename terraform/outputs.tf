@@ -23,3 +23,7 @@ output "connection_string" {
   value       = azurerm_storage_account.storage.primary_connection_string
   sensitive   = true
 }
+
+output "app_url" {
+  value = "http://${azurerm_container_group.app.fqdn}:3000"
+}
