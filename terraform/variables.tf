@@ -21,8 +21,3 @@ variable "container_name" {
 variable "environment" {
   default = "Weapon of Choice"
 }
-
-variable "acr_password" {
-  type      = string
-  sensitive = true
-}
