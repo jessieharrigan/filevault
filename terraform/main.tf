@@ -99,6 +99,7 @@ resource "azurerm_container_group" "app" {
       }
       initial_delay_seconds = 30
       period_seconds        = 10
+      failure_threshold = 3
     }
 
     secure_environment_variables = {

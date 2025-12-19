@@ -23,7 +23,11 @@ jobs:
 
       - name: ☁️ ACR Build
         run: |
-          az acr build --registry filevaultjessie --image filevault-app:v1.0.1 ./src/azure-sa
+          az acr build \
+            --registry filevaultjessie \
+            --image filevault-app:v1.0.1 \
+            --file src/azure-sa/Dockerfile \
+            .
 
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
