@@ -47,7 +47,13 @@ resource "azurerm_storage_container" "container" {
   container_access_type = "private"
 }
 
+resource "time_sleep" "wait_for_rg" {
+  depends_on = [azurerm_resource_group.rg]
+  create_duration = "10s"
+}
+
 resource "azurerm_container_registry" "acr" {
+  depends_on = [time_sleep.wait_for_rg]
   name                = "filevaultjessie"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
@@ -74,7 +80,6 @@ resource "null_resource" "docker_push" {
   }
 }
 
-# 6. Container instance (app)
 resource "azurerm_container_group" "app" {
   name                = "filevault-app-jessie"
   location            = azurerm_resource_group.rg.location
@@ -83,7 +88,11 @@ resource "azurerm_container_group" "app" {
   dns_name_label      = "filevault-app-jessie"
   os_type             = "Linux"
 
-  depends_on = [null_resource.docker_push, azurerm_storage_container.container]
+  depends_on = [
+    azurerm_resource_group.rg, 
+    null_resource.docker_push, 
+    azurerm_storage_container.container
+  ]
 
   container {
     name   = "filevault-app-jessie"
