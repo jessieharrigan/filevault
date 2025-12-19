@@ -6,6 +6,13 @@ terraform {
     }
   }
 
+  backend "azurerm" {
+    resource_group_name  = "rg-terraform-state"
+    storage_account_name = "tfstatejessie176645197"
+    container_name       = "tfstate"
+    key                  = "filevault.terraform.tfstate"
+  }
+
   required_version = ">= 1.1.0"
 }
 
@@ -61,25 +68,6 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-resource "null_resource" "docker_push" {
-  depends_on = [azurerm_container_registry.acr]
-
-  triggers = {
-    image_tag = "v1.0.1" 
-  }
-
-  provisioner "local-exec" {
-    # Move up one level from 'terraform' folder, then into 'src/azure-sa'
-    working_dir = "${path.module}/../src/azure-sa" 
-
-    command = <<EOT
-      az acr login --name ${azurerm_container_registry.acr.name}
-      docker build --platform linux/amd64 -t ${azurerm_container_registry.acr.login_server}/filevault-app:${self.triggers.image_tag} .
-      docker push ${azurerm_container_registry.acr.login_server}/filevault-app:${self.triggers.image_tag}
-    EOT
-  }
-}
-
 resource "azurerm_container_group" "app" {
   name                = "filevault-app-jessie"
   location            = azurerm_resource_group.rg.location
@@ -90,13 +78,12 @@ resource "azurerm_container_group" "app" {
 
   depends_on = [
     azurerm_resource_group.rg, 
-    null_resource.docker_push, 
     azurerm_storage_container.container
   ]
 
   container {
     name   = "filevault-app-jessie"
-    image  = "${azurerm_container_registry.acr.login_server}/filevault-app:${null_resource.docker_push.triggers.image_tag}"
+    image  = "${azurerm_container_registry.acr.login_server}/filevault-app:$v1.0.1"
     cpu    = "1"
     memory = "1.5"
 
