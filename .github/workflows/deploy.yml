@@ -26,7 +26,7 @@ jobs:
           az acr build \
             --registry filevaultjessie \
             --image filevault-app:v1.0.1 \
-            --file src/azure-sa/Dockerfile \
+            --file src/azure-sa/dockerfile \
             .
 
       - name: 🔧 Setup Terraform
