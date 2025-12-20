@@ -1,3 +1,8 @@
+variable "container_image_tag" {
+  type    = string
+  default = "latest"
+}
+
 variable "resource_group_name" {
   default = "rg-filevault"
 }

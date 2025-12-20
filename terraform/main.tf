@@ -83,7 +83,7 @@ resource "azurerm_container_group" "app" {
 
   container {
     name   = "filevault-app-jessie"
-    image  = "${azurerm_container_registry.acr.login_server}/filevault-app:v1.0.1"
+    image  = "${azurerm_container_registry.acr.login_server}/filevault-app:${var.container_image_tag}"
     cpu    = "1"
     memory = "1.5"
 
