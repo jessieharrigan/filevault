@@ -32,7 +32,7 @@ jobs:
           docker build \
             -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
             -f src/azure-sa/Dockerfile \
-            .
+            ./src/azure-sa
 
       - name: 🚀 Push Image to ACR
         run: |
