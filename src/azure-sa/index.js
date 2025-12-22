@@ -1,5 +1,6 @@
 const appInsights = require('applicationinsights');
 
+/* istanbul ignore if */
 if (process.env.NODE_ENV !== 'test') {
     appInsights.setup().start();
 }
@@ -47,6 +48,10 @@ const saveFilesData = (files) => {
 };
 
 let files = loadFilesData();
+
+app.get('/', (req, res) => {
+    res.status(200).send('FileVault is Active 🚀');
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -99,10 +104,7 @@ app.delete('/files/:key', async (req, res) => {
     }
 });
 
-app.get('/', (req, res) => {
-    res.status(200).send('FileVault is Active 🚀');
-});
-
+/* istanbul ignore if */
 if (require.main === module) {
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Server is running on http://0.0.0.0:${PORT}`);
