@@ -10,11 +10,16 @@
     "test:coverage": "jest --coverage --coverageReporters='lcov'"
   },
   "dependencies": {
+    "@azure/identity": "^4.13.0",
+    "@azure/keyvault-secrets": "^4.10.0",
     "@azure/storage-blob": "^12.29.1",
     "applicationinsights": "^3.12.1",
     "dotenv": "^8.6.0",
     "express": "^4.22.1",
-    "multer": "^1.4.4-lts.1"
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "multer": "^2.0.2",
+    "xss-clean": "^0.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

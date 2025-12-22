@@ -1,5 +1,9 @@
 provider "azurerm" {
-  features {}
+  features {
+    key_vault {
+      purge_soft_delete_on_destroy = true
+    }
+  }
 }
 
 terraform {
@@ -11,3 +15,5 @@ terraform {
   }
   required_version = ">= 1.1.0"
 }
+
+data "azurerm_client_config" "current" {}

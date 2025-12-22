@@ -1,3 +1,8 @@
+variable "suffix" {
+  type        = string
+  default     = "jessie" 
+}
+
 variable "container_image_tag" {
   type    = string
   default = "latest"

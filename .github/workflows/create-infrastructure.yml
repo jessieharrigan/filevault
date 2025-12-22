@@ -36,6 +36,10 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: 🛡️ OWASP Dependency Check
+        working-directory: ./src/azure-sa
+        run: npm audit --audit-level=high
+
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -77,9 +81,20 @@ jobs:
         run: |
           cd terraform
           terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"
-          terraform apply -auto-approve -var="container_image_tag=${{ github.sha }}"
+
+          terraform apply -auto-approve \
+            -var="container_image_tag=${{ github.sha }}" \
+            -var="suffix=jessie" \
+            -var="key_vault_name=kv-filevault-jessie"
+
+          echo "APP_URL=$(terraform output -raw app_url)" >> $GITHUB_ENV
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: 🧪 Run Smoke Test
+        run: |
+          chmod +x ./smoke-test.sh
+          ./smoke-test.sh ${{ env.APP_URL }}
