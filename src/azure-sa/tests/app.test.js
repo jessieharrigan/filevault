@@ -18,7 +18,7 @@ describe('FileVault API Basic Tests', () => {
     test('GET / should return 200 OK', async () => {
         const response = await request(app).get('/');
         expect(response.statusCode).toBe(200);
-        expect(response.text).toBe('FileVault is Active 🚀');
+        expect(response.text).toContain('<title>FileVault</title>');
     });
 
     test('GET /files should return an array', async () => {

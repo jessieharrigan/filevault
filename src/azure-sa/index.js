@@ -1,6 +1,8 @@
 const appInsights = require('applicationinsights');
 
-appInsights.setup().start();
+if (process.env.NODE_ENV !== 'test') {
+    appInsights.setup().start();
+}
 
 const crypto = require('crypto');
 global.crypto = crypto;
