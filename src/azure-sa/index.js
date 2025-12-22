@@ -97,10 +97,14 @@ app.delete('/files/:key', async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on http://0.0.0.0:${PORT}`);
-});
-
 app.get('/', (req, res) => {
     res.status(200).send('FileVault is Active 🚀');
 });
+
+if (require.main === module) {
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server is running on http://0.0.0.0:${PORT}`);
+    });
+}
+
+module.exports = app;
