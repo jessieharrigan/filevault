@@ -15,6 +15,26 @@ jobs:
     steps:
       - name: 📦 Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./src/azure-sa/package-lock.json
+
+      - name: 🧪 Unit tests
+        working-directory: ./src/azure-sa
+        run: |
+          npm ci
+          npx jest --coverage
+
+      - name: 🔍 SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
