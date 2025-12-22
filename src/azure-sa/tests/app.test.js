@@ -1,6 +1,5 @@
 const request = require('supertest');
 const app = require('../index');
-const fs = require('fs');
 
 jest.mock('@azure/storage-blob', () => ({
     BlobServiceClient: jest.fn().mockImplementation(() => ({
