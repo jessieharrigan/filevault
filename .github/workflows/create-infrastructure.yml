@@ -81,13 +81,13 @@ jobs:
         run: |
           cd terraform
           terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"
-          # Add the Key Vault Name variable here
+
           terraform apply -auto-approve \
             -var="container_image_tag=${{ github.sha }}" \
-            -var="key_vault_name=${{ secrets.KEY_VAULT_NAME }}"
+            -var="suffix=jessie" \
+            -var="key_vault_name=kv-filevault-jessie"
 
-          APP_URL=$(terraform output -raw app_url)
-          echo "APP_URL=$APP_URL" >> $GITHUB_ENV
+          echo "APP_URL=$(terraform output -raw app_url)" >> $GITHUB_ENV
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
