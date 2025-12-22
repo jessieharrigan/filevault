@@ -14,4 +14,6 @@ resource "azurerm_key_vault_secret" "example_secret" {
   name         = "StorageAccountKey"
   value        = azurerm_storage_account.storage.primary_access_key
   key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_key_vault.kv]
 }
