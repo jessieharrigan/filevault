@@ -24,6 +24,10 @@ jobs:
         run: |
           npm ci
           ./node_modules/.bin/eslint .
+            
+      - name: 🛡️ OWASP Dependency Check
+        working-directory: ./src/azure-sa
+        run: npm audit --audit-level=high
 
       - name: Unit tests
         working-directory: ./src/azure-sa
@@ -54,7 +58,16 @@ jobs:
       - name: 🐳 Docker Build Test
         run: |
           docker build --platform linux/amd64 -t test-build -f src/azure-sa/Dockerfile ./src/azure-sa
-        
-      - name: 🛡️ OWASP Dependency Check
-        working-directory: ./src/azure-sa
-        run: npm audit --audit-level=high
+
+      - name: 🐳 Docker Smoke Test (Local)
+        run: |
+          docker run -d --name test-app \
+            -p 3000:3000 \
+            -e AZURE_STORAGE_ACCOUNT_NAME=devstoreaccount1 \
+            -e AZURE_CONTAINER_NAME=test \
+            test-build
+          
+          chmod +x ./smoke-test.sh
+          ./smoke-test.sh http://localhost:3000
+          
+          docker stop test-app 
