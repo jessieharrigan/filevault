@@ -26,6 +26,14 @@ describe('FileVault API Tests', () => {
         jest.clearAllMocks();
     });
 
+    beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+        console.error.mockRestore();
+    });
+
     describe('GET Routes', () => {
         test('GET / should return 200 OK', async () => {
             const response = await request(app).get('/');
@@ -39,15 +47,16 @@ describe('FileVault API Tests', () => {
             expect(Array.isArray(response.body)).toBe(true);
         });
 
-        test('GET /files - should handle case where data file exists', async () => {
-            const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
-            const readSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify([{ fileName: 'test' }]));
-            
-            await request(app).get('/files');
-            
-            expect(existsSpy).toHaveBeenCalled();
-            existsSpy.mockRestore();
-            readSpy.mockRestore();
+        test('should load empty array if filesData.json does not exist', () => {
+        jest.isolateModules(() => {
+        const fs = require('fs');
+        const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+        
+        require('../index'); 
+        
+        expect(existsSpy).toHaveBeenCalled();
+        existsSpy.mockRestore();
+            });
         });
     });
 
