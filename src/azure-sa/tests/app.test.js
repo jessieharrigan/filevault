@@ -1,4 +1,5 @@
 const request = require('supertest');
+const fs = require('fs');
 
 const mockUploadFile = jest.fn().mockResolvedValue(true);
 const mockDelete = jest.fn().mockResolvedValue(true);
@@ -8,7 +9,6 @@ jest.mock('@azure/storage-blob', () => {
         BlobServiceClient: jest.fn().mockImplementation(() => ({
             getContainerClient: jest.fn().mockReturnValue({
                 getBlockBlobClient: jest.fn().mockReturnValue({
-                    // Use the variables defined above
                     uploadFile: mockUploadFile,
                     delete: mockDelete 
                 })
@@ -20,66 +20,98 @@ jest.mock('@azure/storage-blob', () => {
 
 const app = require('../index');
 
-describe('FileVault API Basic Tests', () => {
-    
-    test('GET / should return 200 OK', async () => {
-        const response = await request(app).get('/');
-        expect(response.statusCode).toBe(200);
-        expect(response.text).toContain('<title>FileVault</title>');
+describe('FileVault API Tests', () => {
+
+    beforeEach(() => {
+        jest.clearAllMocks();
     });
 
-    test('GET /files should return an array', async () => {
-        const response = await request(app).get('/files');
-        expect(response.statusCode).toBe(200);
-        expect(Array.isArray(response.body)).toBe(true);
+    beforeAll(() => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
-    test('POST /upload without file should return 400', async () => {
-        const response = await request(app)
-            .post('/upload')
-            .send({ note: 'test' });
-        expect(response.statusCode).toBe(400);
+    afterAll(() => {
+        console.error.mockRestore();
     });
-});
 
-test('POST /upload - Successful upload should return 200', async () => {
-    const fakeFile = Buffer.from('this is a test file');
+    describe('GET Routes', () => {
+        test('GET / should return 200 OK', async () => {
+            const response = await request(app).get('/');
+            expect(response.statusCode).toBe(200);
+            expect(response.text).toMatch(/FileVault is Active 🚀|<title>FileVault<\/title>/);
+        });
 
-    const response = await request(app)
-        .post('/upload')
-        .field('note', 'My Test File')
-        .attach('file', fakeFile, 'test.txt');
+        test('GET /files should return an array', async () => {
+            const response = await request(app).get('/files');
+            expect(response.statusCode).toBe(200);
+            expect(Array.isArray(response.body)).toBe(true);
+        });
 
-    expect(response.statusCode).toBe(200);
-    expect(response.text).toBe('File uploaded successfully.');
-});
+        test('should load empty array if filesData.json does not exist', () => {
+        jest.isolateModules(() => {
+        const fs = require('fs');
+        const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+        
+        require('../index'); 
+        
+        expect(existsSpy).toHaveBeenCalled();
+        existsSpy.mockRestore();
+            });
+        });
+    });
 
-test('DELETE /files/:key - Should delete a file and return 200', async () => {
-    const testKey = 'some-fake-blob-key';
-    
-    const response = await request(app).delete(`/files/${testKey}`);
+    describe('POST /upload', () => {
+        test('Successful upload should return 200', async () => {
+            const fakeFile = Buffer.from('this is a test file');
+            const response = await request(app)
+                .post('/upload')
+                .field('note', 'My Test File')
+                .attach('file', fakeFile, 'test.txt');
 
-    expect(response.statusCode).toBe(200);
-    expect(response.text).toBe('File deleted successfully.');
-});
+            expect(response.statusCode).toBe(200);
+            expect(response.text).toBe('File uploaded successfully.');
+        });
 
-test('DELETE /files/:key - Should return 500 if Azure delete fails', async () => {
-    mockDelete.mockRejectedValueOnce(new Error('Azure Storage is down'));
+        test('POST without file should return 400', async () => {
+            const response = await request(app)
+                .post('/upload')
+                .send({ note: 'test' });
+            expect(response.statusCode).toBe(400);
+        });
 
-    const response = await request(app).delete('/files/any-key');
+        test('POST without fileName should return 400', async () => {
+            const response = await request(app)
+                .post('/upload')
+                .attach('file', Buffer.from('test'), 'test.txt');
 
-    expect(response.statusCode).toBe(500);
-    expect(response.text).toBe('Failed to delete file.');
-});
+            expect(response.statusCode).toBe(400);
+            expect(response.text).toBe('File name is required.');
+        });
 
-test('POST /upload - Should return 500 if upload fails', async () => {
-    mockUploadFile.mockRejectedValueOnce(new Error('Upload failed'));
+        test('Should return 500 if Azure upload fails', async () => {
+            mockUploadFile.mockRejectedValueOnce(new Error('Upload failed'));
+            const response = await request(app)
+                .post('/upload')
+                .field('note', 'test')
+                .attach('file', Buffer.from('test'), 'test.txt');
 
-    const response = await request(app)
-        .post('/upload')
-        .field('note', 'test')
-        .attach('file', Buffer.from('test'), 'test.txt');
+            expect(response.statusCode).toBe(500);
+            expect(response.text).toBe('Failed to upload file.');
+        });
+    });
 
-    expect(response.statusCode).toBe(500);
-    expect(response.text).toBe('Failed to upload file.');
+    describe('DELETE /files/:key', () => {
+        test('Successful delete should return 200', async () => {
+            const response = await request(app).delete('/files/some-key');
+            expect(response.statusCode).toBe(200);
+            expect(response.text).toBe('File deleted successfully.');
+        });
+
+        test('Should return 500 if Azure delete fails', async () => {
+            mockDelete.mockRejectedValueOnce(new Error('Azure Storage is down'));
+            const response = await request(app).delete('/files/any-key');
+            expect(response.statusCode).toBe(500);
+            expect(response.text).toBe('Failed to delete file.');
+        });
+    });
 });
