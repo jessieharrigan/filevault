@@ -59,6 +59,13 @@ resource "azurerm_container_group" "app" {
     azurerm_storage_container.container
   ]
 
+  diagnostics {
+    log_analytics {
+      workspace_id  = azurerm_log_analytics_workspace.logs.workspace_id
+      workspace_key = azurerm_log_analytics_workspace.logs.primary_shared_key
+    }
+  }
+
   container {
     name   = "filevault-app-jessie"
     image  = "${azurerm_container_registry.acr.login_server}/filevault-app:${var.container_image_tag}"
@@ -81,6 +88,7 @@ resource "azurerm_container_group" "app" {
     }
 
     secure_environment_variables = {
+      "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
       "AZURE_STORAGE_ACCOUNT_NAME" = azurerm_storage_account.storage.name
       "AZURE_STORAGE_ACCOUNT_KEY"  = azurerm_storage_account.storage.primary_access_key
       "AZURE_CONTAINER_NAME" = azurerm_storage_container.container.name
@@ -92,4 +100,20 @@ resource "azurerm_container_group" "app" {
     username = azurerm_container_registry.acr.admin_username
     password = azurerm_container_registry.acr.admin_password
   }
+}
+
+resource "azurerm_log_analytics_workspace" "logs" {
+  name                = "filevault-law"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+}
+
+resource "azurerm_application_insights" "app_insights" {
+  name                = "filevault-app-insights"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  workspace_id        = azurerm_log_analytics_workspace.logs.id
+  application_type    = "web"
 }

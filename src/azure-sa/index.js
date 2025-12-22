@@ -1,3 +1,7 @@
+const appInsights = require('applicationinsights');
+
+appInsights.setup().start();
+
 const crypto = require('crypto');
 global.crypto = crypto;
 
