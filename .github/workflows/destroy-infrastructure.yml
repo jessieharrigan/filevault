@@ -1,22 +1,20 @@
 name: Destroy infrastructure
 on:
   workflow_dispatch:
-    inputs:
-      manual_confirm:
-        description: 'Type "DESTROY" to confirm'
-        required: true
 
 jobs:
-  terraform-lifecycle:
+  terraform-destroy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: 📦 Checkout Repository
         uses: actions/checkout@v4
-      - name: Set up Azure CLI
+
+      - name: 🔐 Azure Login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-      - name: Terraform Destroy
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
+
+      - name: 🧨 Terraform Destroy
         run: |
           cd terraform
           terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"

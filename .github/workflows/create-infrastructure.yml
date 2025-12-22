@@ -1,42 +1,58 @@
-name: Create infrastructure
+name: CD - Create infrastructure
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch: # Can force run if needed
 
 env:
   ACR_NAME: filevaultjessie
+  RESOURCE_GROUP: rg-filevault
   IMAGE_NAME: filevault-app
 
 jobs:
-  terraform-lifecycle:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: 📦 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Azure CLI
+      - name: 🔐 Azure Login
         uses: azure/login@v2
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      - name: Terraform Init
+      - name: 🔍 Check for Infrastructure
+        id: check_infra
+        run: |
+          if az group show --name ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🏗️ Create Foundation (Conditional)
+        if: steps.check_infra.outputs.exists == 'false'
         run: |
           cd terraform
           terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"
-
-      - name: Terraform Plan (PR & Push)
-        run: |
-          cd terraform
-          terraform plan -var="container_image_tag=${{ github.sha }}"
-
-      # ONLY Apply the Registry on Push to Main
-      - name: Terraform Apply Registry (Push Only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          cd terraform
           terraform apply -target=azurerm_container_registry.acr -auto-approve
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+      - name: 🐳 Build and Push Image
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} -f src/azure-sa/Dockerfile ./src/azure-sa
+          docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: 🚀 Finalize App Deployment
+        run: |
+          cd terraform
+          terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"
+          terraform apply -auto-approve -var="container_image_tag=${{ github.sha }}"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
