@@ -9,6 +9,31 @@ jobs:
     steps:
       - name: 📦 Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./src/azure-sa/package-lock.json
+      
+      - name: 🧹 Lint Code
+        working-directory: ./src/azure-sa
+        run: |
+          npm ci
+          ./node_modules/.bin/eslint .
+
+      - name: Unit tests
+        working-directory: ./src/azure-sa
+        run: |
+          npx jest --coverage
+
+      - name: SonarCloud Scan
+        uses:  SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -18,7 +43,7 @@ jobs:
       - name: 🏗️ Terraform Validate
         run: |
           cd terraform
-          terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}" -backend=false
+          terraform init -backend=false 
           terraform validate
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -28,5 +53,4 @@ jobs:
 
       - name: 🐳 Docker Build Test
         run: |
-          # Build only to test for errors, do not push
-          docker build -t test-build -f src/azure-sa/Dockerfile ./src/azure-sa
+          docker build --platform linux/amd64 -t test-build -f src/azure-sa/Dockerfile ./src/azure-sa

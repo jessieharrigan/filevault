@@ -66,6 +66,7 @@ async function loadFiles() {
     notesList.appendChild(table);
 }
 
+// eslint-disable-next-line no-unused-vars
 async function deleteFile(fileKey) {
     const response = await fetch(`/files/${fileKey}`, {
         method: 'DELETE',
