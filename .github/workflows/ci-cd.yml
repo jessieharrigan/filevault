@@ -15,7 +15,7 @@ jobs:
       - name: 🔧 Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
           cache-dependency-path: ./src/azure-sa/package-lock.json
 
@@ -23,7 +23,7 @@ jobs:
         working-directory: ./src/azure-sa
         run: |
           npm ci
-          npm test -- --coverage
+          npx jest --coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
