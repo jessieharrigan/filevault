@@ -59,6 +59,10 @@ resource "azurerm_container_group" "app" {
     azurerm_storage_container.container
   ]
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   diagnostics {
     log_analytics {
       workspace_id  = azurerm_log_analytics_workspace.logs.workspace_id
@@ -90,7 +94,7 @@ resource "azurerm_container_group" "app" {
     secure_environment_variables = {
       "APPLICATIONINSIGHTS_CONNECTION_STRING" = azurerm_application_insights.app_insights.connection_string
       "AZURE_STORAGE_ACCOUNT_NAME" = azurerm_storage_account.storage.name
-      "AZURE_STORAGE_ACCOUNT_KEY"  = azurerm_storage_account.storage.primary_access_key
+      KEY_VAULT_NAME             = azurerm_key_vault.kv.name
       "AZURE_CONTAINER_NAME" = azurerm_storage_container.container.name
     }
 
@@ -100,6 +104,12 @@ resource "azurerm_container_group" "app" {
     username = azurerm_container_registry.acr.admin_username
     password = azurerm_container_registry.acr.admin_password
   }
+}
+
+resource "azurerm_role_assignment" "aci_to_storage" {
+  scope                = azurerm_storage_account.storage.id 
+  role_definition_name = "Storage Blob Data Contributor"
+  principal_id         = azurerm_container_group.app.identity[0].principal_id
 }
 
 resource "azurerm_log_analytics_workspace" "logs" {
@@ -116,4 +126,39 @@ resource "azurerm_application_insights" "app_insights" {
   resource_group_name = azurerm_resource_group.rg.name
   workspace_id        = azurerm_log_analytics_workspace.logs.id
   application_type    = "web"
+}
+
+# 1. Get current client info (to give yourself access to the vault)
+data "azurerm_client_config" "current" {}
+
+# 2. Create the Key Vault
+resource "azurerm_key_vault" "kv" {
+  name                        = "kv-filevault-${var.suffix}"
+  location                    = azurerm_resource_group.rg.location
+  resource_group_name         = azurerm_resource_group.rg.name
+  enabled_for_disk_encryption = true
+  tenant_id                   = data.azurerm_client_config.current.tenant_id
+  sku_name                    = "standard"
+
+  # Access Policy for the App (Managed Identity)
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = azurerm_container_group.app.identity[0].principal_id
+
+    secret_permissions = ["Get", "List"]
+  }
+
+  # Access Policy for YOU (so you can add secrets via CLI/Portal)
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = data.azurerm_client_config.current.object_id
+
+    secret_permissions = ["Get", "List", "Set", "Delete", "Purge"]
+  }
+}
+
+resource "azurerm_key_vault_secret" "example_secret" {
+  name         = "StorageAccountKey"
+  value        = azurerm_storage_account.storage.primary_access_key
+  key_vault_id = azurerm_key_vault.kv.id
 }

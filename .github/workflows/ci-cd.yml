@@ -54,3 +54,7 @@ jobs:
       - name: 🐳 Docker Build Test
         run: |
           docker build --platform linux/amd64 -t test-build -f src/azure-sa/Dockerfile ./src/azure-sa
+        
+      - name: 🛡️ OWASP Dependency Check
+        working-directory: ./src/azure-sa
+        run: npm audit --audit-level=high

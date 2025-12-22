@@ -36,6 +36,10 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+      - name: 🛡️ OWASP Dependency Check
+        working-directory: ./src/azure-sa
+        run: npm audit --audit-level=high
+
       - name: 🔧 Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -77,7 +81,10 @@ jobs:
         run: |
           cd terraform
           terraform init -backend-config="access_key=${{ secrets.TFSTATE_STORAGE_ACCOUNT_KEY }}"
-          terraform apply -auto-approve -var="container_image_tag=${{ github.sha }}"
+          # Add the Key Vault Name variable here
+          terraform apply -auto-approve \
+            -var="container_image_tag=${{ github.sha }}" \
+            -var="key_vault_name=${{ secrets.KEY_VAULT_NAME }}"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}

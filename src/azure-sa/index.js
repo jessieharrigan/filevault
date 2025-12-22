@@ -5,6 +5,20 @@ if (process.env.NODE_ENV !== 'test') {
     appInsights.setup().start();
 }
 
+const helmet = require('helmet');
+const xss = require('xss-clean');
+const rateLimit = require('express-rate-limit');
+
+// Prevent Brute Force (A07: Identification and Authentication Failures)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per window
+});
+
+app.use(helmet()); // Sets security headers
+app.use(xss());    // Sanitizes user input
+app.use(limiter);  // Rate limiting
+
 const crypto = require('crypto');
 global.crypto = crypto;
 
@@ -14,24 +28,30 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const { BlobServiceClient, StorageSharedKeyCredential } = require('@azure/storage-blob');
+const { DefaultAzureCredential } = require("@azure/identity");
+
+const credential = new DefaultAzureCredential();
+
+const { BlobServiceClient } = require('@azure/storage-blob');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 const upload = multer({ dest: 'uploads/' });
 
-const sharedKeyCredential = new StorageSharedKeyCredential(
-    process.env.AZURE_STORAGE_ACCOUNT_NAME,
-    process.env.AZURE_STORAGE_ACCOUNT_KEY
-);
-
 const blobServiceClient = new BlobServiceClient(
     `https://${process.env.AZURE_STORAGE_ACCOUNT_NAME}.blob.core.windows.net`,
-    sharedKeyCredential
+    credential
 );
 
 const containerClient = blobServiceClient.getContainerClient(process.env.AZURE_CONTAINER_NAME);
+
+const { SecretClient } = require("@azure/keyvault-secrets");
+if (process.env.KEY_VAULT_NAME) {
+    const vaultUrl = `https://${process.env.KEY_VAULT_NAME}.vault.azure.net`;
+    const secretClient = new SecretClient(vaultUrl, credential);
+    // You would fetch these inside your routes or an async init function
+}
 
 const filesDataPath = './filesData.json';
 
