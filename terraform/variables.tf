@@ -11,6 +11,7 @@ variable "container_image_tag" {
 variable "key_vault_name" {
   type        = string
   description = "The name of the Azure Key Vault"
+  default     = "kv-filevault-jessie" 
 }
 
 variable "resource_group_name" {
