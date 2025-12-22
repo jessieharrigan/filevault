@@ -8,6 +8,11 @@ variable "container_image_tag" {
   default = "latest"
 }
 
+variable "key_vault_name" {
+  type        = string
+  description = "The name of the Azure Key Vault"
+}
+
 variable "resource_group_name" {
   default = "rg-filevault"
 }

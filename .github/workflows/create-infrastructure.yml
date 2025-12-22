@@ -85,7 +85,6 @@ jobs:
           terraform apply -auto-approve \
             -var="container_image_tag=${{ github.sha }}" \
             -var="suffix=jessie" \
-            -var="key_vault_name=kv-filevault-jessie"
 
           echo "APP_URL=$(terraform output -raw app_url)" >> $GITHUB_ENV
         env:
