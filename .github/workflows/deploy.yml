@@ -1,71 +1,40 @@
-name: Deploy FileVault Application
-
+name: 🚀 App CI-CD
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [main]
 
 env:
   ACR_NAME: filevaultjessie
   IMAGE_NAME: filevault-app
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 📦 Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: 🔐 Azure Login
         uses: azure/login@v2
         with:
           creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
-      - name: 🔧 Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_wrapper: false
+      - name: 🐳 Build Image
+        run: |
+          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} -f src/azure-sa/Dockerfile ./src/azure-sa
 
-      - name: 🏗️ Terraform Init
-        working-directory: ./terraform
-        run: terraform init
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-      - name: 🏗️ Terraform Apply (Registry Only)
-        working-directory: ./terraform
-        run: terraform apply -target=azurerm_container_registry.acr -auto-approve
-        env:
-          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-      - name: 🐳 Build and Push Image
+      - name: 🚀 Push & Deploy to Azure
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           az acr login --name ${{ env.ACR_NAME }}
-          docker build -t ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} -f src/azure-sa/Dockerfile ./src/azure-sa
           docker push ${{ env.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
-
-      - name: 🚀 Terraform Apply Final
-        working-directory: ./terraform
-        run: terraform apply -auto-approve -var="container_image_tag=${{ github.sha }}"
+          
+          cd terraform
+          terraform init
+          terraform apply -auto-approve -target=azurerm_container_group.app -var="container_image_tag=${{ github.sha }}"
         env:
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-
-      - name: ✅ Final Summary
-        run: |
-          echo "### Deployment Successful! 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "**URL:** http://filevault-app-jessie.uksouth.azurecontainer.io:3000" >> $GITHUB_STEP_SUMMARY
-          echo "**Image Tag:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-      
-      - name: 🧹 Cleanup
-        if: always()
-        run: docker system prune -f || true
