@@ -23,7 +23,7 @@ jobs:
         working-directory: ./src/azure-sa
         run: |
           npm ci
-          npx run lint
+          ./node_modules/.bin/eslint .
 
       - name: Unit tests
         working-directory: ./src/azure-sa
