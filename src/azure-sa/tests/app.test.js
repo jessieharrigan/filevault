@@ -1,13 +1,25 @@
+process.env.AZURE_STORAGE_ACCOUNT_NAME = 'mockaccount';
+process.env.AZURE_CONTAINER_NAME = 'mockcontainer';
+
 const request = require('supertest');
-const fs = require('fs');
 
 const mockUploadFile = jest.fn().mockResolvedValue(true);
 const mockDelete = jest.fn().mockResolvedValue(true);
+
+const mockListBlobs = {
+    [Symbol.asyncIterator]: async function* () {
+        yield { 
+            name: 'test-blob-key', 
+            metadata: { fileName: 'Test File' } 
+        };
+    }
+};
 
 jest.mock('@azure/storage-blob', () => {
     return {
         BlobServiceClient: jest.fn().mockImplementation(() => ({
             getContainerClient: jest.fn().mockReturnValue({
+                listBlobsFlat: jest.fn().mockReturnValue(mockListBlobs),
                 getBlockBlobClient: jest.fn().mockReturnValue({
                     uploadFile: mockUploadFile,
                     delete: mockDelete 
@@ -18,6 +30,11 @@ jest.mock('@azure/storage-blob', () => {
     };
 });
 
+// Mocking @azure/identity to prevent it from trying to reach out to Azure during tests
+jest.mock('@azure/identity', () => ({
+    DefaultAzureCredential: jest.fn().mockImplementation(() => ({}))
+}));
+
 const app = require('../index');
 
 describe('FileVault API Tests', () => {
@@ -27,36 +44,29 @@ describe('FileVault API Tests', () => {
     });
 
     beforeAll(() => {
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
-    afterAll(() => {
+    afterAll(async () => {
         console.error.mockRestore();
+        // Small delay to allow any pending async handles to close
+        await new Promise(resolve => setTimeout(resolve, 500));
     });
 
     describe('GET Routes', () => {
-        test('GET / should return 200 OK', async () => {
+        test('GET / should return 200 OK (from static public/index.html)', async () => {
             const response = await request(app).get('/');
             expect(response.statusCode).toBe(200);
-            expect(response.text).toMatch(/FileVault is Active 🚀|<title>FileVault<\/title>/);
+            // Since we serve index.html, we check for HTML content
+            expect(response.headers['content-type']).toMatch(/html/);
         });
 
-        test('GET /files should return an array', async () => {
+        test('GET /files should return an array from Azure Metadata', async () => {
             const response = await request(app).get('/files');
             expect(response.statusCode).toBe(200);
             expect(Array.isArray(response.body)).toBe(true);
-        });
-
-        test('should load empty array if filesData.json does not exist', () => {
-        jest.isolateModules(() => {
-        const fs = require('fs');
-        const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
-        
-        require('../index'); 
-        
-        expect(existsSpy).toHaveBeenCalled();
-        existsSpy.mockRestore();
-            });
+            expect(response.body[0]).toHaveProperty('name', 'Test File');
+            expect(response.body[0]).toHaveProperty('key', 'test-blob-key');
         });
     });
 
@@ -65,11 +75,12 @@ describe('FileVault API Tests', () => {
             const fakeFile = Buffer.from('this is a test file');
             const response = await request(app)
                 .post('/upload')
-                .field('note', 'My Test File')
+                .field('note', 'Test File')
                 .attach('file', fakeFile, 'test.txt');
 
             expect(response.statusCode).toBe(200);
             expect(response.text).toBe('File uploaded successfully.');
+            expect(mockUploadFile).toHaveBeenCalled();
         });
 
         test('POST without file should return 400', async () => {
@@ -105,6 +116,7 @@ describe('FileVault API Tests', () => {
             const response = await request(app).delete('/files/some-key');
             expect(response.statusCode).toBe(200);
             expect(response.text).toBe('File deleted successfully.');
+            expect(mockDelete).toHaveBeenCalled();
         });
 
         test('Should return 500 if Azure delete fails', async () => {

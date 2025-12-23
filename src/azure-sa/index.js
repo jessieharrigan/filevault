@@ -18,7 +18,6 @@ require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const filesDataPath = path.join(__dirname, 'filesData.json');
 const upload = multer({ dest: 'uploads/' });
 
 const limiter = rateLimit({
@@ -73,9 +72,10 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         await blockBlobClient.uploadFile(req.file.path, {
             metadata: { fileName: req.body.note }
         });
-        fs.unlinkSync(req.file.path); 
 
-        files.push({ name: fileName, key: blobName });
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path); 
+        }
 
         res.status(200).send('File uploaded successfully.');
     } catch (err) {
