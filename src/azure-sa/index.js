@@ -25,7 +25,12 @@ const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
     max: 100 
 });
-app.use(helmet()); 
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // Prevents CSP from blocking local/inline assets
+    hsts: false,                  // STOPS the ERR_SSL_PROTOCOL_ERROR by allowing HTTP
+  })
+);
 app.use(xss());    
 app.use(limiter);  
 app.use(express.json());
@@ -59,10 +64,6 @@ const loadFilesData = () => {
 const saveFilesData = (data) => fs.writeFileSync(filesDataPath, JSON.stringify(data, null, 2));
 
 let files = loadFilesData();
-
-app.get('/', (req, res) => {
-    res.status(200).send('FileVault is Active 🚀');
-});
 
 app.get('/files', (req, res) => res.json(files));
 
