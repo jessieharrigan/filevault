@@ -50,22 +50,16 @@ if (process.env.KEY_VAULT_NAME) {
     secretClient = new SecretClient(vaultUrl, credential);
 }
 
-const loadFilesData = () => {
-    if (fs.existsSync(filesDataPath)) {
-        try {
-            return JSON.parse(fs.readFileSync(filesDataPath));
-        } catch (e) {
-            return [];
-        }
+app.get('/files', async (req, res) => {
+    let list = [];
+    for await (const blob of containerClient.listBlobsFlat({ includeMetadata: true })) {
+        list.push({
+            name: blob.metadata.fileName || blob.name,
+            key: blob.name
+        });
     }
-    return [];
-};
-
-const saveFilesData = (data) => fs.writeFileSync(filesDataPath, JSON.stringify(data, null, 2));
-
-let files = loadFilesData();
-
-app.get('/files', (req, res) => res.json(files));
+    res.json(list);
+});
 
 app.post('/upload', upload.single('file'), async (req, res) => {
     const fileName = req.body.note;
@@ -76,11 +70,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         const blobName = req.file.filename;
         const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
-        await blockBlobClient.uploadFile(req.file.path);
+        await blockBlobClient.uploadFile(req.file.path, {
+            metadata: { fileName: req.body.note }
+        });
         fs.unlinkSync(req.file.path); 
 
         files.push({ name: fileName, key: blobName });
-        saveFilesData(files);
 
         res.status(200).send('File uploaded successfully.');
     } catch (err) {
@@ -94,9 +89,6 @@ app.delete('/files/:key', async (req, res) => {
     try {
         const blockBlobClient = containerClient.getBlockBlobClient(fileKey);
         await blockBlobClient.delete();
-
-        files = files.filter(f => f.key !== fileKey);
-        saveFilesData(files);
 
         res.status(200).send('File deleted successfully.');
     } catch (err) {
